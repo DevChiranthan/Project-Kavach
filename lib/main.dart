@@ -1,13 +1,15 @@
+// lib/main.dart
+
 import 'package:flutter/material.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:ui';
 
-// These imports are from your project.
 import 'package:project_kavach_app/live_screen.dart';
-import 'package:project_kavach_app/nfc_scan_screen.dart';
-// Import the new map screen
+import 'package:project_kavach_app/ble_scan_screen.dart';
 import 'package:project_kavach_app/map_screen.dart';
+// Make sure you have this file in your lib folder
+import 'package:project_kavach_app/student_dashboard_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -40,25 +42,33 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen>
     with SingleTickerProviderStateMixin {
-  // --- CHANGE 1: The starting tab is now '2' for the middle Home icon ---
+  bool _isDemoModeOn = false;
   int _selectedIndex = 2;
 
-  // --- CHANGE 2: The pages list has been reordered ---
-  static final List<Widget> _pages = <Widget>[
-    const LiveScreen(),
-    const MapScreen(), // Connected the new Map Screen
-    const HomeScreen(), // Home screen is now in the middle
-    const Center(
-        child: Text('History Page', style: TextStyle(color: Colors.white))),
-    const Center(
-        child: Text('More Page', style: TextStyle(color: Colors.white))),
-  ];
+  // We build the list of pages here so it can access the state
+  List<Widget> _getPages() {
+    return <Widget>[
+      LiveScreen(
+        isDemoModeOn: _isDemoModeOn,
+        onDemoModeChanged: (value) {
+          setState(() {
+            _isDemoModeOn = value;
+          });
+        },
+      ),
+      const MapScreen(),
+      HomeScreen(isDemoModeOn: _isDemoModeOn),
+      const Center(
+          child: Text('History Page', style: TextStyle(color: Colors.white))),
+      const Center(
+          child: Text('More Page', style: TextStyle(color: Colors.white))),
+    ];
+  }
 
-  // --- CHANGE 3: The icons list has been reordered to match the pages ---
   final List<IconData> _icons = [
     Icons.show_chart,
     Icons.map_outlined,
-    Icons.home_filled, // Home icon is now in the middle
+    Icons.home_filled,
     Icons.history,
     Icons.menu,
   ];
@@ -75,7 +85,7 @@ class _MainScreenState extends State<MainScreen>
       extendBody: true,
       body: IndexedStack(
         index: _selectedIndex,
-        children: _pages,
+        children: _getPages(), // Use the method to get the pages
       ),
       bottomNavigationBar: AnimatedBottomNavBar(
         selectedIndex: _selectedIndex,
@@ -89,7 +99,6 @@ class _MainScreenState extends State<MainScreen>
 // -----------------------------------------------------------------------------
 // CUSTOM ANIMATED NAVIGATION BAR WIDGET (No Changes Here)
 // -----------------------------------------------------------------------------
-
 class AnimatedBottomNavBar extends StatefulWidget {
   final int selectedIndex;
   final List<IconData> icons;
@@ -119,12 +128,10 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-
     final initialPosition = widget.selectedIndex.toDouble();
     _tween = Tween<double>(begin: initialPosition, end: initialPosition);
     _animation = _tween
         .animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-
     _controller.forward();
   }
 
@@ -134,7 +141,6 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
     if (widget.selectedIndex != oldWidget.selectedIndex) {
       _tween.begin = oldWidget.selectedIndex.toDouble();
       _tween.end = widget.selectedIndex.toDouble();
-
       _controller.reset();
       _controller.forward();
     }
@@ -150,7 +156,6 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     const navBarHeight = 70.0;
-
     return Container(
       height: navBarHeight,
       color: Colors.transparent,
@@ -187,11 +192,10 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
     );
   }
 
-  Widget _buildNavItem({
-    required IconData icon,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildNavItem(
+      {required IconData icon,
+      required bool isSelected,
+      required VoidCallback onTap}) {
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -213,26 +217,18 @@ class NavBarPainter extends CustomPainter {
   final double position;
   final int itemCount;
   final Color color;
-
-  NavBarPainter({
-    required this.position,
-    required this.itemCount,
-    required this.color,
-  });
-
+  NavBarPainter(
+      {required this.position, required this.itemCount, required this.color});
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = color
       ..style = PaintingStyle.fill;
-
     final path = Path();
     final itemWidth = size.width / itemCount;
     final notchCenter = (position * itemWidth) + (itemWidth / 2);
-
     const notchRadius = 30.0;
     const cornerRadius = 20.0;
-
     path.moveTo(0, cornerRadius);
     path.quadraticBezierTo(0, 0, cornerRadius, 0);
     path.lineTo(notchCenter - notchRadius, 0);
@@ -246,22 +242,19 @@ class NavBarPainter extends CustomPainter {
     path.lineTo(size.width, size.height);
     path.lineTo(0, size.height);
     path.close();
-
     canvas.drawPath(path, paint);
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return true;
-  }
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
 
 // -----------------------------------------------------------------------------
-// HOME SCREEN CODE (No Changes Here)
+// HOME SCREEN CODE
 // -----------------------------------------------------------------------------
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
-
+  final bool isDemoModeOn;
+  const HomeScreen({super.key, required this.isDemoModeOn});
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -284,14 +277,8 @@ class HomeScreen extends StatelessWidget {
                     _buildFrostedTile(context),
                     Row(
                       children: [
-                        Expanded(
-                          flex: 5,
-                          child: _buildVitalsContent(),
-                        ),
-                        Expanded(
-                          flex: 4,
-                          child: _buildModel(),
-                        ),
+                        Expanded(flex: 5, child: _buildVitalsContent()),
+                        Expanded(flex: 4, child: _buildModel()),
                       ],
                     ),
                   ],
@@ -311,10 +298,14 @@ class HomeScreen extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            icon: const Icon(Icons.qr_code_scanner, color: Colors.white70),
+            icon: const Icon(Icons.bluetooth_audio,
+                color: Colors.white70, size: 28),
             onPressed: () {
               Navigator.of(context).push(MaterialPageRoute(
-                  builder: (context) => const NfcScanScreen()));
+                builder: (context) => BleScanScreen(
+                  isDemoModeOn: isDemoModeOn,
+                ),
+              ));
             },
           ),
           Text(
@@ -326,7 +317,8 @@ class HomeScreen extends StatelessWidget {
                 letterSpacing: 1.5),
           ),
           IconButton(
-            icon: const Icon(Icons.person_outline, color: Colors.white70),
+            icon: const Icon(Icons.person_outline,
+                color: Colors.white70, size: 28),
             onPressed: () {},
           ),
         ],

@@ -4,9 +4,21 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:ui';
 
-class LiveScreen extends StatelessWidget {
-  const LiveScreen({super.key});
+class LiveScreen extends StatefulWidget {
+  final bool isDemoModeOn;
+  final ValueChanged<bool> onDemoModeChanged;
 
+  const LiveScreen({
+    super.key,
+    required this.isDemoModeOn,
+    required this.onDemoModeChanged,
+  });
+
+  @override
+  State<LiveScreen> createState() => _LiveScreenState();
+}
+
+class _LiveScreenState extends State<LiveScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -29,10 +41,8 @@ class LiveScreen extends StatelessWidget {
                   child: ListView(
                     children: [
                       const SizedBox(height: 20),
-                      // Status indicators
                       _buildStatusRow(),
                       const SizedBox(height: 32),
-                      // Chart cards
                       _buildChartCard(
                         title: 'Heart Rate',
                         icon: Icons.favorite,
@@ -68,10 +78,6 @@ class LiveScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white70),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
           Text(
             'Live Monitoring',
             style: GoogleFonts.roboto(
@@ -80,9 +86,22 @@ class LiveScreen extends StatelessWidget {
                 fontSize: 18,
                 letterSpacing: 1.2),
           ),
-          IconButton(
-            icon: const Icon(Icons.person_outline, color: Colors.white70),
-            onPressed: () {},
+          Row(
+            children: [
+              Text(
+                'DEMO',
+                style: GoogleFonts.roboto(
+                    color: widget.isDemoModeOn
+                        ? Colors.greenAccent
+                        : Colors.white54,
+                    fontWeight: FontWeight.bold),
+              ),
+              Switch(
+                value: widget.isDemoModeOn,
+                onChanged: widget.onDemoModeChanged,
+                activeColor: Colors.greenAccent,
+              ),
+            ],
           ),
         ],
       ),
@@ -90,18 +109,22 @@ class LiveScreen extends StatelessWidget {
   }
 
   Widget _buildStatusRow() {
+    final bleStatus = widget.isDemoModeOn ? 'Connected' : 'Disconnected';
+    final bleColor =
+        widget.isDemoModeOn ? const Color(0xFF4CAF50) : Colors.redAccent;
+    final signalStatus = widget.isDemoModeOn ? 'Excellent' : 'N/A';
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         _buildStatusIndicator(
           title: 'BLE Status',
-          value: 'Connected',
-          color: const Color(0xFF4CAF50),
+          value: bleStatus,
+          color: bleColor,
           icon: Icons.bluetooth_connected,
         ),
         _buildStatusIndicator(
           title: 'Signal Strength',
-          value: 'Excellent',
+          value: signalStatus,
           color: const Color(0xFF2196F3),
           icon: Icons.signal_cellular_4_bar,
         ),

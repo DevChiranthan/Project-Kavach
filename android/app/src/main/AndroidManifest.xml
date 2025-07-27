@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="project_kavach_app"
+        android:label="Project Kavach"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true"
         android:name="${applicationName}">

@@ -1,8 +1,11 @@
+// lib/map_screen.dart
+
+import 'dart:ui';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-// The new MapScreen designed to match your app's dark theme.
+// The new MapScreen, redesigned to look like the Uber map.
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
 
@@ -30,254 +33,254 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0A0A12), // Matching the main theme
-      appBar: AppBar(
-        title: Text(
-          'LOCATION TRACKER',
-          style: GoogleFonts.roboto(
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.5,
-          ),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: Column(
+    // Using a Stack to layer the map, info panel, and buttons.
+    return Material(
+      color: const Color(0xFF0A0A12),
+      child: Stack(
         children: [
-          // The programmatically drawn map area
-          Expanded(
-            flex: 5,
-            child: _buildVectorMap(),
-          ),
-          // The data log area below the map
-          Expanded(
-            flex: 4,
-            child: _buildLocationData(),
-          ),
+          // The programmatically drawn map fills the whole screen.
+          _buildVectorMap(),
+
+          // The top app bar area.
+          _buildTopBar(),
+
+          // The bottom info panel slides up from the bottom.
+          _buildBottomPanel(),
         ],
       ),
     );
   }
 
-  // This widget builds the custom-painted map and the animations on top.
   Widget _buildVectorMap() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // The CustomPainter draws the vector map background.
-            CustomPaint(
-              size: Size.infinite,
-              painter: FakeMapPainter(),
-            ),
-            // Pulsing circles for the animation.
-            _buildPulsingCircle(delay: 0.0),
-            _buildPulsingCircle(delay: 0.5),
-            // The central marker for "Kavya".
-            _buildLocationMarker(),
-          ],
+    return CustomPaint(
+      size: Size.infinite,
+      painter: UberStyleMapPainter(),
+    );
+  }
+
+  Widget _buildTopBar() {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildTopButton(Icons.arrow_back),
+              Text(
+                'LIVE LOCATION',
+                style: GoogleFonts.roboto(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              _buildTopButton(Icons.my_location),
+            ],
+          ),
         ),
       ),
     );
   }
-
-  // The glowing, pulsing circles.
-  Widget _buildPulsingCircle({required double delay}) {
-    return AnimatedBuilder(
-      animation: _pulseController,
-      builder: (context, child) {
-        final animationValue = (_pulseController.value + delay) % 1.0;
-        final scale = 1.5 * animationValue;
-        final opacity = 1.0 - animationValue;
-
-        return Transform.scale(
-          scale: scale,
-          child: Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: Colors.cyanAccent.withOpacity(opacity),
-                width: 1.5,
-              ),
-            ),
+  
+  Widget _buildTopButton(IconData icon) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF202020),
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 10,
           ),
-        );
-      },
+        ],
+      ),
+      child: IconButton(
+        icon: Icon(icon, color: Colors.white70),
+        onPressed: () {
+          if (icon == Icons.arrow_back) {
+            // This allows the back button to work.
+            if(Navigator.canPop(context)) Navigator.pop(context);
+          }
+        },
+      ),
     );
   }
 
-  // The marker with a glowing effect.
-  Widget _buildLocationMarker() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.cyan,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.cyan.withOpacity(0.5),
-                blurRadius: 20,
-                spreadRadius: 5,
-              ),
-            ],
+  // This builds the floating panel at the bottom of the screen.
+  Widget _buildBottomPanel() {
+    return Positioned(
+      bottom: 90, // Raised to avoid the navigation bar
+      left: 20,
+      right: 20,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E1E1E).withOpacity(0.85),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white.withOpacity(0.1)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    const CircleAvatar(
+                      radius: 28,
+                      backgroundColor: Colors.cyan,
+                      child: Icon(Icons.person, color: Colors.black, size: 30),
+                    ),
+                    const SizedBox(width: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'KAVYA',
+                          style: GoogleFonts.roboto(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Status: In Transit',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const Divider(color: Colors.white24, height: 32),
+                _buildInfoRow(
+                  Icons.access_time_filled,
+                  'Last Ping',
+                  'Just now',
+                  Colors.greenAccent,
+                ),
+                const SizedBox(height: 12),
+                 _buildInfoRow(
+                  Icons.location_on,
+                  'Location',
+                  'Vidhana Soudha, Bengaluru',
+                  Colors.white,
+                ),
+              ],
+            ),
           ),
-          child: const Icon(Icons.person, color: Colors.black, size: 28),
         ),
-        const SizedBox(height: 8),
+      ),
+    );
+  }
+  
+  Widget _buildInfoRow(IconData icon, String title, String value, Color valueColor) {
+    return Row(
+      children: [
+        Icon(icon, color: Colors.white70, size: 20),
+        const SizedBox(width: 12),
         Text(
-          'KAVYA',
-          style: GoogleFonts.roboto(
-            color: Colors.white,
+          title,
+          style: const TextStyle(color: Colors.white70, fontSize: 14),
+        ),
+        const Spacer(),
+        Text(
+          value,
+          style: GoogleFonts.robotoMono(
+            color: valueColor,
+            fontSize: 14,
             fontWeight: FontWeight.bold,
-            letterSpacing: 1.2,
-            shadows: [
-              const Shadow(blurRadius: 10, color: Colors.black),
-            ],
           ),
         ),
       ],
     );
   }
-
-  // The data log section below the map.
-  Widget _buildLocationData() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'SIGNAL LOG',
-            style: GoogleFonts.roboto(
-              color: Colors.white70,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.5,
-            ),
-          ),
-          const Divider(color: Colors.white24, height: 24),
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                _buildInfoTile(
-                  icon: Icons.access_time_filled,
-                  title: 'Last Ping Received',
-                  subtitle: 'Just now',
-                  color: Colors.greenAccent.withOpacity(0.8),
-                ),
-                _buildInfoTile(
-                  icon: Icons.my_location,
-                  title: 'Coordinates',
-                  subtitle: '12.9716° N, 77.5946° E',
-                  color: Colors.cyanAccent.withOpacity(0.8),
-                ),
-                _buildInfoTile(
-                  icon: Icons.signal_cellular_alt,
-                  title: 'Signal Strength',
-                  subtitle: 'Strong (-65 dBm)',
-                  color: Colors.amberAccent.withOpacity(0.8),
-                ),
-                _buildInfoTile(
-                  icon: Icons.security,
-                  title: 'Status',
-                  subtitle: 'Secure Zone | School Campus',
-                  color: Colors.redAccent.withOpacity(0.8),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Reusable widget for each line of data.
-  Widget _buildInfoTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10.0),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(width: 20),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(color: Colors.white70, fontSize: 14),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: GoogleFonts.robotoMono(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          )
-        ],
-      ),
-    );
-  }
 }
 
-// This CustomPainter draws the abstract map background.
-class FakeMapPainter extends CustomPainter {
+// This CustomPainter draws the abstract map background in the Uber style.
+class UberStyleMapPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    // Background color
+    // Dark background
     final backgroundPaint = Paint()..color = const Color(0xFF1A1D24);
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), backgroundPaint);
 
-    // Paint for the roads
+    // Thinner, lighter roads
     final roadPaint = Paint()
-      ..color = Colors.white.withOpacity(0.05)
+      ..color = Colors.white.withOpacity(0.1)
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+
+    // Darker, subtle blocks
+    final blockPaint = Paint()
+      ..color = Colors.white.withOpacity(0.02)
+      ..style = PaintingStyle.fill;
+      
+    // Bright yellow highlight lines
+    final highlightPaint = Paint()
+      ..color = const Color(0xFFFFC107).withOpacity(0.6)
+      ..strokeWidth = 3.0
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final random = Random(42); // Use a fixed seed for a consistent map layout
+
+    // Draw grid-like blocks
+    for (double i = -100; i < size.width + 100; i += 80) {
+      for (double j = -100; j < size.height + 100; j += 80) {
+         if (random.nextDouble() > 0.4) {
+           canvas.drawRect(
+             Rect.fromLTWH(
+               i + random.nextDouble() * 20,
+               j + random.nextDouble() * 20,
+               random.nextDouble() * 40 + 30,
+               random.nextDouble() * 40 + 30,
+             ),
+             blockPaint,
+           );
+         }
+      }
+    }
+    
+    // Draw grid-like roads
+    for (double i = 0; i < size.width; i += 50) {
+      canvas.drawLine(Offset(i, 0), Offset(i, size.height), roadPaint);
+    }
+     for (double i = 0; i < size.height; i += 50) {
+      canvas.drawLine(Offset(0, i), Offset(size.width, i), roadPaint);
+    }
+
+    // Draw the main highlighted route path
+    final path = Path();
+    path.moveTo(size.width * 0.1, size.height * 0.8);
+    path.quadraticBezierTo(
+      size.width * 0.3, size.height * 0.6,
+      size.width * 0.5, size.height * 0.5,
+    );
+     path.quadraticBezierTo(
+      size.width * 0.7, size.height * 0.4,
+      size.width * 0.9, size.height * 0.2,
+    );
+    canvas.drawPath(path, highlightPaint);
+    
+    // Draw a marker on the path
+     final markerPaint = Paint()..color = Colors.cyan;
+     canvas.drawCircle(Offset(size.width * 0.5, size.height * 0.5), 8, markerPaint);
+     final markerBorderPaint = Paint()
+      ..color = Colors.black
       ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke;
-    
-    // Paint for the blocks
-     final blockPaint = Paint()
-      ..color = Colors.white.withOpacity(0.03)
-      ..style = PaintingStyle.fill;
-
-    // Draw a grid of blocks and roads
-    final random = Random(10); // Use a fixed seed for consistency
-    for (int i = 0; i < 15; i++) {
-      // Draw random blocks
-      canvas.drawRect(
-        Rect.fromLTWH(
-          random.nextDouble() * size.width,
-          random.nextDouble() * size.height,
-          random.nextDouble() * 80 + 20,
-          random.nextDouble() * 80 + 20,
-        ),
-        blockPaint,
-      );
-      // Draw random road lines
-      canvas.drawLine(
-        Offset(random.nextDouble() * size.width, random.nextDouble() * size.height),
-        Offset(random.nextDouble() * size.width, random.nextDouble() * size.height),
-        roadPaint,
-      );
-    }
+     canvas.drawCircle(Offset(size.width * 0.5, size.height * 0.5), 8, markerBorderPaint);
   }
 
   @override
