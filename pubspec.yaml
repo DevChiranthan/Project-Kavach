@@ -1,0 +1,92 @@
+# This is the name of your project. It must use snake_case (lowercase_with_underscores).
+name: project_kavach_app
+
+# A brief description of what your project does.
+description: "A new Flutter project."
+
+# This line prevents you from accidentally publishing your private app to the public pub.dev package repository.
+publish_to: 'none' 
+
+# This is your app's version number. The +1 is the build number.
+# You'll increment this each time you release a new version.
+version: 1.0.0+1
+
+# This section defines which versions of the Dart and Flutter SDK your project is compatible with.
+environment:
+  sdk: '>=3.4.3 <4.0.0'
+
+# -------------------------------------------------------------------
+# SECTION 1: DEPENDENCIES - Packages your app needs to run.
+# -------------------------------------------------------------------
+dependencies:
+  # The core Flutter framework.
+  flutter:
+    sdk: flutter
+  
+  # A package for adding beautiful, simple animations.
+  flutter_animate: ^4.5.0
+  
+  # A package that includes the standard Apple-style icons (for iOS).
+  cupertino_icons: ^1.0.8
+
+  # Package for displaying 3D models.
+  model_viewer_plus: ^1.9.3
+
+  # Package for using custom fonts from Google Fonts.
+  google_fonts: ^6.2.1
+
+# -------------------------------------------------------------------
+# SECTION 2: DEV DEPENDENCIES - Tools for development and testing.
+# These are NOT included in your final app release.
+# -------------------------------------------------------------------
+dev_dependencies:
+  # The core Flutter testing framework.
+  flutter_test:
+    sdk: flutter
+  
+  # A package that checks your code for common style issues and errors.
+  flutter_lints: ^3.0.0
+
+  # The package we use to automatically generate your app's launcher icon.
+  flutter_launcher_icons: ^0.13.1
+
+  # The package we use to automatically generate your app's native splash screen.
+  flutter_native_splash: ^2.4.0
+
+# -------------------------------------------------------------------
+# SECTION 3: FLUTTER-SPECIFIC CONFIGURATION
+# -------------------------------------------------------------------
+flutter:
+  # This line allows you to use the built-in Material Design icons (like Icons.home).
+  uses-material-design: true
+  
+  # This section tells your app where to find asset files like images and fonts.
+  assets:
+    # By listing the folder with a trailing slash, you include all files inside it.
+    # This is easier than listing every single file.
+    - assets/
+
+# -------------------------------------------------------------------
+# SECTION 4: PACKAGE-SPECIFIC CONFIGURATION
+# -------------------------------------------------------------------
+
+# This block configures the 'flutter_launcher_icons' package.
+# It has NO indentation, meaning it's at the root level of the file.
+flutter_launcher_icons:
+  # Use "launcher_icon" as the name for the Android icon files.
+  android: true
+  # Generate icons for iOS as well.
+  ios: true
+  # The path to the source image you want to use for the icon.
+  # Make sure you have a square logo file at 'assets/icon.png'
+  image_path: "assets/icon.png"
+
+# This block configures the 'flutter_native_splash' package.
+# It also has NO indentation.
+flutter_native_splash:
+  # The background color of the splash screen (FFFFFF is white).
+  color: "#FFFFFF"
+  # The image to display in the center of the splash screen.
+  image: assets/icon.png
+  # How the image should be scaled on iOS.
+  ios_content_mode: scaleAspectFit
