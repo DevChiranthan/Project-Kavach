@@ -56,8 +56,7 @@ class _BleScanScreenState extends State<BleScanScreen>
       } else {
         setState(() {
           _isScanning = false;
-          _statusText =
-              "Device Not Found\nEnable 'Demo Mode' on the Live screen and try again.";
+          _statusText = "Device Not Found.";
           // --- THIS IS THE CORRECTED LINE ---
           _animationController.duration = const Duration(seconds: 2);
           _animationController.repeat();

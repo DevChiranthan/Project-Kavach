@@ -9,7 +9,6 @@ import 'package:project_kavach_app/live_screen.dart';
 import 'package:project_kavach_app/ble_scan_screen.dart';
 import 'package:project_kavach_app/map_screen.dart';
 // Make sure you have this file in your lib folder
-import 'package:project_kavach_app/student_dashboard_screen.dart';
 
 void main() {
   runApp(const MyApp());

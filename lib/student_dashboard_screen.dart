@@ -3,9 +3,70 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:ui';
+import 'package:permission_handler/permission_handler.dart'; // Import for permissions
+import 'ble_service.dart'; // Import the new Bluetooth logic file
 
-class StudentDashboardScreen extends StatelessWidget {
+class StudentDashboardScreen extends StatefulWidget {
   const StudentDashboardScreen({super.key});
+
+  @override
+  State<StudentDashboardScreen> createState() => _StudentDashboardScreenState();
+}
+
+class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
+  final BleService _bleService = BleService();
+  String _connectionStatus = "Disconnected";
+  bool _isConnecting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _bleService.initialize();
+  }
+
+  @override
+  void dispose() {
+    _bleService.dispose();
+    super.dispose();
+  }
+
+  // This new function requests permissions BEFORE trying to scan.
+  Future<void> _requestPermissionsAndConnect() async {
+    if (_isConnecting) return;
+
+    Map<Permission, PermissionStatus> statuses = await [
+      Permission.bluetoothScan,
+      Permission.bluetoothConnect,
+      Permission.location,
+    ].request();
+
+    if (statuses[Permission.bluetoothScan]!.isGranted &&
+        statuses[Permission.bluetoothConnect]!.isGranted &&
+        statuses[Permission.location]!.isGranted) {
+      // If permissions are granted, start the scan.
+      setState(() {
+        _isConnecting = true;
+      });
+      _bleService.startScanAndConnect((status) {
+        if (mounted) {
+          setState(() {
+            _connectionStatus = status;
+            // Stop showing "Connecting..." once a final state is reached.
+            if (status.toLowerCase() != 'scanning...' &&
+                status.toLowerCase() != 'connecting') {
+              _isConnecting = false;
+            }
+          });
+        }
+      });
+    } else {
+      // If permissions are denied, show an error.
+      setState(() {
+        _connectionStatus = "Permissions Denied";
+      });
+      print("Permissions were not granted. Cannot scan.");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,6 +91,8 @@ class StudentDashboardScreen extends StatelessWidget {
                     const SizedBox(height: 10),
                     _buildUserInfoCard(),
                     const SizedBox(height: 24),
+                    _buildConnectivitySection(), // New section added here
+                    const SizedBox(height: 24),
                     _buildDashboardGrid(),
                     const SizedBox(height: 24),
                     _buildActionButtons(),
@@ -43,6 +106,77 @@ class StudentDashboardScreen extends StatelessWidget {
       ),
     );
   }
+
+  // This new widget displays the connection button and status.
+  Widget _buildConnectivitySection() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    "Uniform Status: ",
+                    style:
+                        GoogleFonts.roboto(color: Colors.white70, fontSize: 16),
+                  ),
+                  Text(
+                    _connectionStatus,
+                    style: GoogleFonts.roboto(
+                      color: _connectionStatus.toLowerCase() == 'connected'
+                          ? Colors.greenAccent
+                          : _connectionStatus == "Permissions Denied"
+                              ? Colors.redAccent
+                              : Colors.amberAccent,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _requestPermissionsAndConnect,
+                  icon: const Icon(Icons.bluetooth, color: Colors.white),
+                  label: Text(
+                    _isConnecting ? 'Scanning...' : 'Connect to Uniform',
+                    style: GoogleFonts.roboto(
+                        fontSize: 16,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _isConnecting
+                        ? Colors.grey.shade600
+                        : Colors.indigoAccent,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    elevation: 5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- All of your original UI-building methods are preserved below ---
 
   Widget _buildCustomAppBar(BuildContext context) {
     return Padding(
