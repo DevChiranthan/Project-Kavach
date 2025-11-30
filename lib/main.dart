@@ -1,14 +1,19 @@
-// lib/main.dart
-
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:ui';
 
+// EXISTING SCREENS
 import 'package:project_kavach_app/live_screen.dart';
 import 'package:project_kavach_app/ble_scan_screen.dart';
 import 'package:project_kavach_app/map_screen.dart';
-// Make sure you have this file in your lib folder
+import 'package:project_kavach_app/student_dashboard_screen.dart'; // Ensure this exists
+
+// NEW DEMO FILES - USING PACKAGE IMPORTS
+// This assumes your pubspec.yaml name is "project_kavach_app"
+import 'package:project_kavach_app/providers/ble_provider.dart';
+import 'package:project_kavach_app/screens/demo_dashboard.dart';
 
 void main() {
   runApp(const MyApp());
@@ -19,19 +24,29 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Project Kavach',
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0A0A12),
-        textTheme: GoogleFonts.robotoTextTheme(Theme.of(context).textTheme),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => BleProvider()),
+      ],
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Project Kavach',
+        theme: ThemeData(
+          brightness: Brightness.dark,
+          scaffoldBackgroundColor: const Color(0xFF0A0A12),
+          textTheme: GoogleFonts.robotoTextTheme(Theme.of(context).textTheme),
+        ),
+        home: const DemoDashboard(),
       ),
-      home: const MainScreen(),
     );
   }
 }
 
+// ... (Rest of your MainScreen and HomeScreen code remains unchanged below)
+// ...
+// -----------------------------------------------------------------------------
+// YOUR ORIGINAL MAIN SCREEN (PRESERVED)
+// -----------------------------------------------------------------------------
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
@@ -44,7 +59,6 @@ class _MainScreenState extends State<MainScreen>
   bool _isDemoModeOn = false;
   int _selectedIndex = 2;
 
-  // We build the list of pages here so it can access the state
   List<Widget> _getPages() {
     return <Widget>[
       LiveScreen(
@@ -84,7 +98,7 @@ class _MainScreenState extends State<MainScreen>
       extendBody: true,
       body: IndexedStack(
         index: _selectedIndex,
-        children: _getPages(), // Use the method to get the pages
+        children: _getPages(),
       ),
       bottomNavigationBar: AnimatedBottomNavBar(
         selectedIndex: _selectedIndex,
@@ -96,7 +110,7 @@ class _MainScreenState extends State<MainScreen>
 }
 
 // -----------------------------------------------------------------------------
-// CUSTOM ANIMATED NAVIGATION BAR WIDGET (No Changes Here)
+// YOUR ORIGINAL NAVIGATION BAR (PRESERVED)
 // -----------------------------------------------------------------------------
 class AnimatedBottomNavBar extends StatefulWidget {
   final int selectedIndex;
@@ -249,7 +263,7 @@ class NavBarPainter extends CustomPainter {
 }
 
 // -----------------------------------------------------------------------------
-// HOME SCREEN CODE
+// YOUR ORIGINAL HOME SCREEN (PRESERVED)
 // -----------------------------------------------------------------------------
 class HomeScreen extends StatelessWidget {
   final bool isDemoModeOn;

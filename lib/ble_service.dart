@@ -1,14 +1,13 @@
-// lib/ble_service.dart
-
 import 'dart:async';
+import 'dart:typed_data'; // <--- REQUIRED for Int64List
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:flutter/services.dart'; // Needed for vibration pattern
+import 'package:flutter/services.dart';
 
-// --- UUIDs are unchanged ---
+// --- UUIDs ---
 const String KAVACH_SERVICE_UUID = "19B10000-E8F2-537E-4F6C-D104768A1214";
 const String RING_CHARACTERISTIC_UUID = "19B10002-E8F2-537E-4F6C-D104768A1214";
 
@@ -27,10 +26,15 @@ class BleService {
     await flutterTts.setPitch(1.0);
   }
 
-  // --- Scan and Connect logic is unchanged and correct ---
+  // --- Scan and Connect logic ---
   void startScanAndConnect(Function(String) onStatusUpdate) {
     onStatusUpdate("Scanning...");
-    FlutterBluePlus.startScan(timeout: const Duration(seconds: 15), withServices: [Guid(KAVACH_SERVICE_UUID)]);
+    // FlutterBluePlus 1.30.0 uses List<Guid>
+    FlutterBluePlus.startScan(
+      timeout: const Duration(seconds: 15), 
+      withServices: [Guid(KAVACH_SERVICE_UUID)]
+    );
+    
     FlutterBluePlus.scanResults.listen((results) {
       if (results.isNotEmpty) {
         ScanResult r = results.first;
@@ -82,19 +86,20 @@ class BleService {
   Future<void> triggerRingAlert() async {
     // 1. Prepare Vibration
     final Int64List vibrationPattern = Int64List(10);
-    vibrationPattern[0] = 0;   // Start immediately
+    vibrationPattern[0] = 0;    // Start immediately
     vibrationPattern[1] = 1000; // Vibrate for 1 second
     vibrationPattern[2] = 1000; // Pause for 1 second
-    vibrationPattern[3] = 1000; // Vibrate for 1 second
-    vibrationPattern[4] = 1000; // Pause for 1 second
+    vibrationPattern[3] = 1000; 
+    vibrationPattern[4] = 1000; 
     vibrationPattern[5] = 1000;
     vibrationPattern[6] = 1000;
     vibrationPattern[7] = 1000;
     vibrationPattern[8] = 1000;
     vibrationPattern[9] = 1000;
 
-
     // 2. Configure the full-screen notification
+    // Note: RawResourceAndroidNotificationSound requires the file to be in 'android/app/src/main/res/raw/alarm.mp3'
+    // If it's not there, it will use the default sound.
     final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
         'kavach_emergency_channel',
         'Kavach Emergency Alerts',
@@ -102,10 +107,12 @@ class BleService {
         importance: Importance.max,
         priority: Priority.high,
         playSound: true,
-        sound: const RingtoneAndroidNotificationSound(), // Use the phone's actual RINGTONE
-        fullScreenIntent: true, // This is the key to making it a call screen
-        category: AndroidNotificationCategory.call, // This makes it behave like a call
-        vibrationPattern: vibrationPattern, // Add the repeating vibration
+        // CHANGED: RingtoneAndroidNotificationSound does not exist. 
+        // Using default sound ensures no crash.
+        // sound: const RawResourceAndroidNotificationSound('alarm'), 
+        fullScreenIntent: true, 
+        category: AndroidNotificationCategory.call, 
+        vibrationPattern: vibrationPattern, 
         enableVibration: true,
         );
     final NotificationDetails platformDetails = NotificationDetails(android: androidDetails);

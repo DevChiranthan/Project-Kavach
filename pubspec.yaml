@@ -1,41 +1,46 @@
-# pubspec.yaml
-
 name: project_kavach_app
 description: "A new Flutter project."
-publish_to: 'none' 
+publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.4.3 <4.0.0'
+  sdk: '>=3.2.3 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
   
-  flutter_animate: ^4.5.0
-  cupertino_icons: ^1.0.8
-  model_viewer_plus: ^1.9.3
-  google_fonts: ^6.2.1
-  flutter_blue_plus: ^1.31.8 
-  permission_handler: ^11.3.1
-  flutter_tts: ^4.0.2
-  geolocator: ^12.0.0
-  flutter_local_notifications: ^17.0.0 
+  # --- CORE PACKAGES ---
+  provider: ^6.1.1
+  flutter_blue_plus: ^1.30.0
+  permission_handler: ^11.3.0
+  google_fonts: ^6.1.0
+  
+  # --- DEMO EFFECTS ---
+  audioplayers: ^5.2.1
+  vibration: any
+  flutter_tts: ^3.8.5
+  cupertino_icons: ^1.0.2
+  
+  # --- LEGACY/ORIGINAL APP SUPPORT ---
+  geolocator: ^10.1.0
+  # UPGRADED: This fixes the 'bigLargeIcon' crash
+  flutter_local_notifications: ^17.2.3 
+  model_viewer_plus: ^1.7.0 
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
-  # This is the package that generates your icons
-  flutter_launcher_icons: ^0.13.1
-
-# This section MUST be at the end of the file
-flutter_launcher_icons:
-  android: true
-  ios: true
-  image_path: "assets/icon.png" # Tells the package where to find your logo
+  flutter_lints: ^2.0.0
 
 flutter:
   uses-material-design: true
   assets:
     - assets/
+    - assets/alarm.mp3
+    - assets/icon.png
+    - assets/nfc_scan_image.png
+    - assets/uniform.glb
+    - assets/shirt.png
+    - assets/heart_rate_placeholder.png
+    - assets/spo2_placeholder.png
