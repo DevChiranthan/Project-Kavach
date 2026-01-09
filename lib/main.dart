@@ -1,19 +1,19 @@
+// lib/main.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:ui';
+import 'package:permission_handler/permission_handler.dart';
 
-// EXISTING SCREENS
-import 'package:project_kavach_app/live_screen.dart';
+// --- IMPORTS ---
+// Ensure these file paths exactly match your project structure
+import 'package:project_kavach_app/live_screen.dart'; 
 import 'package:project_kavach_app/ble_scan_screen.dart';
 import 'package:project_kavach_app/map_screen.dart';
-import 'package:project_kavach_app/student_dashboard_screen.dart'; // Ensure this exists
-
-// NEW DEMO FILES - USING PACKAGE IMPORTS
-// This assumes your pubspec.yaml name is "project_kavach_app"
 import 'package:project_kavach_app/providers/ble_provider.dart';
-import 'package:project_kavach_app/screens/demo_dashboard.dart';
+import 'package:project_kavach_app/screens/incoming_call_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -36,17 +36,12 @@ class MyApp extends StatelessWidget {
           scaffoldBackgroundColor: const Color(0xFF0A0A12),
           textTheme: GoogleFonts.robotoTextTheme(Theme.of(context).textTheme),
         ),
-        home: const DemoDashboard(),
+        home: const MainScreen(),
       ),
     );
   }
 }
 
-// ... (Rest of your MainScreen and HomeScreen code remains unchanged below)
-// ...
-// -----------------------------------------------------------------------------
-// YOUR ORIGINAL MAIN SCREEN (PRESERVED)
-// -----------------------------------------------------------------------------
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
@@ -57,10 +52,44 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen>
     with SingleTickerProviderStateMixin {
   bool _isDemoModeOn = false;
-  int _selectedIndex = 2;
+  int _selectedIndex = 2; // Default to Home
 
+  @override
+  void initState() {
+    super.initState();
+    _requestPermissions();
+    _setupGlobalAlertListener();
+  }
+
+  // 1. Request Permissions
+  Future<void> _requestPermissions() async {
+    await [
+      Permission.bluetoothScan,
+      Permission.bluetoothConnect,
+      Permission.location,
+      Permission.notification,
+    ].request();
+  }
+
+  // 2. Global Listener for the Call Alert (Loop Break)
+  void _setupGlobalAlertListener() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final bleProvider = Provider.of<BleProvider>(context, listen: false);
+      bleProvider.alertStream.listen((isAlert) {
+        if (isAlert) {
+          // Trigger the Call Screen immediately on Loop Break
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (context) => const IncomingCallScreen()),
+          );
+        }
+      });
+    });
+  }
+
+  // 3. Page Navigation Configuration
   List<Widget> _getPages() {
     return <Widget>[
+      // Index 0: Charts/Live Data
       LiveScreen(
         isDemoModeOn: _isDemoModeOn,
         onDemoModeChanged: (value) {
@@ -69,10 +98,14 @@ class _MainScreenState extends State<MainScreen>
           });
         },
       ),
+      // Index 1: Map
       const MapScreen(),
+      // Index 2: Home Dashboard
       HomeScreen(isDemoModeOn: _isDemoModeOn),
+      // Index 3: History
       const Center(
           child: Text('History Page', style: TextStyle(color: Colors.white))),
+      // Index 4: More/Menu
       const Center(
           child: Text('More Page', style: TextStyle(color: Colors.white))),
     ];
@@ -110,7 +143,311 @@ class _MainScreenState extends State<MainScreen>
 }
 
 // -----------------------------------------------------------------------------
-// YOUR ORIGINAL NAVIGATION BAR (PRESERVED)
+// HOME SCREEN (Dashboard with 3D Model & Real Data)
+// -----------------------------------------------------------------------------
+class HomeScreen extends StatelessWidget {
+  final bool isDemoModeOn;
+  const HomeScreen({super.key, required this.isDemoModeOn});
+
+  @override
+  Widget build(BuildContext context) {
+    // Access BLE Provider to listen for changes
+    final ble = Provider.of<BleProvider>(context);
+
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment(-0.8, -0.6),
+            colors: [Color(0xFF2A2A3A), Color(0xFF0A0A12)],
+            radius: 1.0,
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              _buildCustomAppBar(context, ble),
+              Expanded(
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    _buildFrostedTile(context),
+                    Row(
+                      children: [
+                        // Left Side: Vitals
+                        Expanded(flex: 5, child: _buildVitalsContent(ble)),
+                        // Right Side: 3D Model
+                        Expanded(flex: 4, child: _buildModel()),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- NEW DYNAMIC APP BAR ---
+  Widget _buildCustomAppBar(BuildContext context, BleProvider ble) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Left: Fallback Scan Screen Button (Optional)
+          IconButton(
+            icon: const Icon(Icons.bluetooth_audio,
+                color: Colors.white70, size: 28),
+            onPressed: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) => BleScanScreen(
+                  isDemoModeOn: isDemoModeOn,
+                ),
+              ));
+            },
+          ),
+          
+          // Center: Title
+          Text(
+            'PROJECT KAVACH',
+            style: GoogleFonts.roboto(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                letterSpacing: 1.5),
+          ),
+
+          // Right: THE NEW DYNAMIC CONNECT BUTTON
+          GestureDetector(
+            onTap: () {
+              // Prevent double-clicking while scanning
+              if (ble.isScanning) return;
+
+              if (ble.isConnected) {
+                ble.disconnect();
+              } else {
+                ble.startScanAndConnect();
+              }
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                // Color Logic: Green (Connected) / Amber (Scanning) / Grey (Idle)
+                color: ble.isConnected
+                    ? Colors.green.withOpacity(0.2)
+                    : ble.isScanning
+                        ? Colors.amber.withOpacity(0.2)
+                        : Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(
+                  color: ble.isConnected
+                      ? Colors.greenAccent
+                      : ble.isScanning
+                          ? Colors.amberAccent
+                          : Colors.white24,
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Icon Logic: Spinner or Static Icon
+                  if (ble.isScanning)
+                    const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.amberAccent,
+                      ),
+                    )
+                  else
+                    Icon(
+                      ble.isConnected ? Icons.bluetooth_connected : Icons.bluetooth,
+                      color: ble.isConnected ? Colors.greenAccent : Colors.white70,
+                      size: 18,
+                    ),
+                  const SizedBox(width: 8),
+                  
+                  // Text Logic
+                  Text(
+                    ble.isConnected
+                        ? "CONNECTED"
+                        : ble.isScanning
+                            ? "SCANNING..."
+                            : "PAIR",
+                    style: TextStyle(
+                      color: ble.isConnected
+                          ? Colors.greenAccent
+                          : ble.isScanning
+                              ? Colors.amberAccent
+                              : Colors.white70,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFrostedTile(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    return Center(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(30.0),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
+          child: Container(
+            width: size.width * 0.9,
+            height: size.height * 0.6,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(30.0),
+              border: Border.all(color: Colors.white.withOpacity(0.1)),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- CONNECTED TO REAL DATA ---
+  Widget _buildVitalsContent(BleProvider ble) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 40.0, right: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'Your Unseen Guardian',
+            style: GoogleFonts.ebGaramond(
+              color: Colors.white.withOpacity(0.85),
+              fontWeight: FontWeight.w600,
+              fontSize: 36,
+              height: 1.2,
+            ),
+          ),
+          const SizedBox(height: 40),
+          
+          // 1. Heart Rate (Real Data)
+          _buildVitalsDisplay(
+              'Heart Rate',
+              ble.isConnected && ble.bpm > 0 ? '${ble.bpm}' : '--', 
+              'BPM',
+              Icons.favorite,
+              const Color(0xFFE53935)),
+              
+          const SizedBox(height: 32),
+          
+          // 2. SpO2 (Static for now, or derive from code if available)
+          _buildVitalsDisplay(
+              'SpO2', 
+              ble.isConnected ? '98' : '--', 
+              '%', 
+              Icons.bubble_chart, 
+              const Color(0xFF00BCD4)),
+              
+          const SizedBox(height: 32),
+          
+          // 3. System Status (Based on connection)
+          _buildVitalsDisplay(
+              'Status',
+              ble.isConnected ? 'Active' : 'Offline',
+              '',
+              ble.isConnected ? Icons.check_circle : Icons.error_outline,
+              ble.isConnected ? Colors.greenAccent : Colors.grey),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModel() {
+    return Transform.translate(
+      offset: const Offset(-40, 0),
+      child: const ModelViewer(
+        src: 'assets/uniform.glb',
+        alt: "Uniform 3D Model",
+        autoRotate: true,
+        cameraControls: true,
+        disableZoom: true,
+        cameraOrbit: '0deg 90deg 4.8m',
+        minCameraOrbit: 'auto 90deg 4.8m',
+        maxCameraOrbit: 'auto 90deg 4.8m',
+        fieldOfView: '22deg',
+        backgroundColor: Colors.transparent,
+      ),
+    );
+  }
+
+  Widget _buildVitalsDisplay(
+      String label, String value, String unit, IconData icon, Color color) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(icon, color: color, size: 24),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label.toUpperCase(),
+                  style: const TextStyle(
+                      color: Colors.white54,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 1.1)),
+              const SizedBox(height: 2),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        value,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 32,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                  if (unit.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4.0),
+                      child: Text(
+                        unit,
+                        style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400),
+                      ),
+                    ),
+                ],
+              )
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// NAVIGATION BAR WIDGET (Preserved)
 // -----------------------------------------------------------------------------
 class AnimatedBottomNavBar extends StatefulWidget {
   final int selectedIndex;
@@ -260,206 +597,4 @@ class NavBarPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
-}
-
-// -----------------------------------------------------------------------------
-// YOUR ORIGINAL HOME SCREEN (PRESERVED)
-// -----------------------------------------------------------------------------
-class HomeScreen extends StatelessWidget {
-  final bool isDemoModeOn;
-  const HomeScreen({super.key, required this.isDemoModeOn});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment(-0.8, -0.6),
-            colors: [Color(0xFF2A2A3A), Color(0xFF0A0A12)],
-            radius: 1.0,
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildCustomAppBar(context),
-              Expanded(
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    _buildFrostedTile(context),
-                    Row(
-                      children: [
-                        Expanded(flex: 5, child: _buildVitalsContent()),
-                        Expanded(flex: 4, child: _buildModel()),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCustomAppBar(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.bluetooth_audio,
-                color: Colors.white70, size: 28),
-            onPressed: () {
-              Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) => BleScanScreen(
-                  isDemoModeOn: isDemoModeOn,
-                ),
-              ));
-            },
-          ),
-          Text(
-            'PROJECT KAVACH',
-            style: GoogleFonts.roboto(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                letterSpacing: 1.5),
-          ),
-          IconButton(
-            icon: const Icon(Icons.person_outline,
-                color: Colors.white70, size: 28),
-            onPressed: () {},
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFrostedTile(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    return Center(
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(30.0),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
-          child: Container(
-            width: size.width * 0.9,
-            height: size.height * 0.6,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(30.0),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildVitalsContent() {
-    return Padding(
-      padding: const EdgeInsets.only(left: 40.0, right: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            'Your Unseen Guardian',
-            style: GoogleFonts.ebGaramond(
-              color: Colors.white.withOpacity(0.85),
-              fontWeight: FontWeight.w600,
-              fontSize: 36,
-              height: 1.2,
-            ),
-          ),
-          const SizedBox(height: 40),
-          _buildVitalsDisplay('Heart Rate', '72', 'BPM', Icons.favorite,
-              const Color(0xFFE53935)),
-          const SizedBox(height: 32),
-          _buildVitalsDisplay(
-              'SpO2', '98', '%', Icons.bubble_chart, const Color(0xFF00BCD4)),
-          const SizedBox(height: 32),
-          _buildVitalsDisplay('Mood', 'Anxiety', '',
-              Icons.sentiment_very_dissatisfied, const Color(0xFFFFC107)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildModel() {
-    return Transform.translate(
-      offset: const Offset(-40, 0),
-      child: const ModelViewer(
-        src: 'assets/uniform.glb',
-        alt: "Uniform 3D Model",
-        autoRotate: true,
-        cameraControls: true,
-        disableZoom: true,
-        cameraOrbit: '0deg 90deg 4.8m',
-        minCameraOrbit: 'auto 90deg 4.8m',
-        maxCameraOrbit: 'auto 90deg 4.8m',
-        fieldOfView: '22deg',
-        backgroundColor: Colors.transparent,
-      ),
-    );
-  }
-
-  Widget _buildVitalsDisplay(
-      String label, String value, String unit, IconData icon, Color color) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Icon(icon, color: color, size: 24),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label.toUpperCase(),
-                  style: const TextStyle(
-                      color: Colors.white54,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 1.1)),
-              const SizedBox(height: 2),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  Flexible(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        value,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 32,
-                            fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
-                  if (unit.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 4.0),
-                      child: Text(
-                        unit,
-                        style: const TextStyle(
-                            color: Colors.white54,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w400),
-                      ),
-                    ),
-                ],
-              )
-            ],
-          ),
-        ),
-      ],
-    );
-  }
 }
